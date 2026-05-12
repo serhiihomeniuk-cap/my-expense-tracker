@@ -7,40 +7,48 @@ import { UserService } from '../models/User';
 
 const router = express.Router();
 
-// Configure Passport strategies
-passport.use(new GoogleStrategy({
-  clientID: process.env.GOOGLE_CLIENT_ID!,
-  clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-  callbackURL: process.env.GOOGLE_REDIRECT_URI!
-}, async (accessToken, refreshToken, profile, done) => {
-  try {
-    const user = await UserService.findOrCreate('google', profile.id, {
-      email: profile.emails?.[0]?.value,
-      displayName: profile.displayName,
-      avatarUrl: profile.photos?.[0]?.value
-    });
-    done(null, user);
-  } catch (error) {
-    done(error);
-  }
-}));
+// Configure Passport strategies - only if credentials are provided
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  passport.use(new GoogleStrategy({
+    clientID: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    callbackURL: process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3001/auth/google/callback'
+  }, async (accessToken, refreshToken, profile, done) => {
+    try {
+      const user = await UserService.findOrCreate('google', profile.id, {
+        email: profile.emails?.[0]?.value,
+        displayName: profile.displayName,
+        avatarUrl: profile.photos?.[0]?.value
+      });
+      done(null, user);
+    } catch (error) {
+      done(error);
+    }
+  }));
+} else {
+  console.warn('⚠️  Google OAuth not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env');
+}
 
-passport.use(new GitHubStrategy({
-  clientID: process.env.GITHUB_CLIENT_ID!,
-  clientSecret: process.env.GITHUB_CLIENT_SECRET!,
-  callbackURL: process.env.GITHUB_REDIRECT_URI!
-}, async (accessToken, refreshToken, profile, done) => {
-  try {
-    const user = await UserService.findOrCreate('github', profile.id, {
-      email: profile.emails?.[0]?.value,
-      displayName: profile.displayName || profile.username,
-      avatarUrl: profile.photos?.[0]?.value
-    });
-    done(null, user);
-  } catch (error) {
-    done(error);
-  }
-}));
+if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
+  passport.use(new GitHubStrategy({
+    clientID: process.env.GITHUB_CLIENT_ID,
+    clientSecret: process.env.GITHUB_CLIENT_SECRET,
+    callbackURL: process.env.GITHUB_REDIRECT_URI || 'http://localhost:3001/auth/github/callback'
+  }, async (accessToken, refreshToken, profile, done) => {
+    try {
+      const user = await UserService.findOrCreate('github', profile.id, {
+        email: profile.emails?.[0]?.value,
+        displayName: profile.displayName || profile.username,
+        avatarUrl: profile.photos?.[0]?.value
+      });
+      done(null, user);
+    } catch (error) {
+      done(error);
+    }
+  }));
+} else {
+  console.warn('⚠️  GitHub OAuth not configured. Set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET in .env');
+}
 
 // Serialize/deserialize user for session
 passport.serializeUser((user: any, done) => {
@@ -62,17 +70,17 @@ router.get('/google',
 );
 
 router.get('/google/callback',
-  passport.authenticate('google', { failureRedirect: `${process.env.FRONTEND_URL}/login` }),
+  passport.authenticate('google', { failureRedirect: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login` }),
   (req, res) => {
     const user = req.user as any;
     const token = jwt.sign(
       { user: { id: user.id, provider: user.provider, providerUserId: user.provider_user_id, email: user.email, displayName: user.display_name } },
-      process.env.JWT_SECRET!,
+      process.env.JWT_SECRET || 'test-secret-key',
       { expiresIn: '7d' }
     );
 
     // Redirect to frontend with token
-    res.redirect(`${process.env.FRONTEND_URL}/auth/callback?token=${token}`);
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/callback?token=${token}`);
   }
 );
 
@@ -82,17 +90,17 @@ router.get('/github',
 );
 
 router.get('/github/callback',
-  passport.authenticate('github', { failureRedirect: `${process.env.FRONTEND_URL}/login` }),
+  passport.authenticate('github', { failureRedirect: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login` }),
   (req, res) => {
     const user = req.user as any;
     const token = jwt.sign(
       { user: { id: user.id, provider: user.provider, providerUserId: user.provider_user_id, email: user.email, displayName: user.display_name } },
-      process.env.JWT_SECRET!,
+      process.env.JWT_SECRET || 'test-secret-key',
       { expiresIn: '7d' }
     );
 
     // Redirect to frontend with token
-    res.redirect(`${process.env.FRONTEND_URL}/auth/callback?token=${token}`);
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/callback?token=${token}`);
   }
 );
 
@@ -106,7 +114,7 @@ router.get('/me', async (req, res) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'test-secret-key') as any;
     const user = await UserService.findById(decoded.user.id);
 
     if (!user) {
