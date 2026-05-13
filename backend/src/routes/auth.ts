@@ -66,11 +66,11 @@ passport.deserializeUser(async (id: string, done) => {
 
 // Google OAuth routes
 router.get('/google',
-  passport.authenticate('google', { scope: ['profile', 'email'] })
+  passport.authenticate('google', { scope: ['profile', 'email'], session: false })
 );
 
 router.get('/google/callback',
-  passport.authenticate('google', { failureRedirect: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login` }),
+  passport.authenticate('google', { failureRedirect: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login`, session: false }),
   (req, res) => {
     const user = req.user as any;
     const token = jwt.sign(
@@ -86,11 +86,11 @@ router.get('/google/callback',
 
 // GitHub OAuth routes
 router.get('/github',
-  passport.authenticate('github', { scope: ['user:email'] })
+  passport.authenticate('github', { scope: ['user:email'], session: false })
 );
 
 router.get('/github/callback',
-  passport.authenticate('github', { failureRedirect: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login` }),
+  passport.authenticate('github', { failureRedirect: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login`, session: false }),
   (req, res) => {
     const user = req.user as any;
     const token = jwt.sign(
