@@ -57,6 +57,30 @@ const Dashboard: React.FC = () => {
     });
   };
 
+  const handleSetBudget = async () => {
+    if (!token) return;
+    const input = window.prompt('Enter monthly budget (USD):', budgetData?.budget?.toString() ?? '');
+    if (input === null) return;
+    const amount = parseFloat(input);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      window.alert('Budget must be a positive number.');
+      return;
+    }
+    try {
+      const year = selectedMonth.getFullYear();
+      const month = selectedMonth.getMonth() + 1;
+      await axios.post(
+        `${process.env.REACT_APP_API_URL}/api/budget/${year}/${month}`,
+        { amount },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      await fetchBudgetData();
+    } catch (error) {
+      console.error('Failed to set budget:', error);
+      window.alert('Failed to set budget. See console for details.');
+    }
+  };
+
   if (loading) {
     return <div className="text-center py-8">Loading...</div>;
   }
@@ -134,7 +158,10 @@ const Dashboard: React.FC = () => {
           ) : (
             <div className="text-center py-8">
               <p className="text-gray-500 mb-4">No budget set for this month</p>
-              <button className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">
+              <button
+                onClick={handleSetBudget}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+              >
                 Set Budget
               </button>
             </div>
