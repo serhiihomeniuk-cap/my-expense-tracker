@@ -1,10 +1,11 @@
+import 'dotenv/config';
+
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
-import dotenv from 'dotenv';
 
 import authRoutes from './routes/auth';
 import categoryRoutes from './routes/categories';
@@ -12,8 +13,6 @@ import transactionRoutes from './routes/transactions';
 import budgetRoutes from './routes/budgets';
 import { initializeDatabase } from './utils/database';
 import { setupWebSocket } from './services/websocket';
-
-dotenv.config();
 
 export const app = express();
 export const server = createServer(app);
